@@ -1,26 +1,56 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-sans: var(--font-inter);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-card-hover: 0 3px 10px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.07);
+  --shadow-popover: 0 8px 30px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #18181b;
+  background: #f4f4f5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #d4d4d8; }
+
+/* Focus */
+:focus-visible {
+  outline: 2px solid #18181b;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Tabular numbers for financial data */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Card shadow utility */
+.shadow-card { box-shadow: var(--shadow-card); }
+.shadow-card-hover { box-shadow: var(--shadow-card-hover); }
+.shadow-popover { box-shadow: var(--shadow-popover); }
+.shadow-sm-ring { box-shadow: var(--shadow-sm); }
+
+/* Table row hover that doesn't clip on rounded containers */
+.table-row-link {
+  display: grid;
+  transition: background-color 120ms ease;
+}
+.table-row-link:hover { background: #fafafa; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
 }

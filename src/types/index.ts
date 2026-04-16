@@ -1,0 +1,167 @@
+export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'expired'
+
+export interface Organisation {
+  id: string
+  user_id: string
+  name: string
+  email: string | null
+  phone: string | null
+  address: string | null
+  city: string | null
+  state: string | null
+  postcode: string | null
+  country: string | null
+  website: string | null
+  logo_url: string | null
+  default_currency: string
+  invoice_prefix: string
+  invoice_next_number: number
+  quote_prefix: string
+  quote_next_number: number
+  tax_name: string
+  created_at: string
+}
+
+export interface Client {
+  id: string
+  org_id: string
+  name: string
+  company: string | null
+  email: string | null
+  phone: string | null
+  address: string | null
+  city: string | null
+  state: string | null
+  postcode: string | null
+  country: string | null
+  created_at: string
+}
+
+export interface InvoiceItem {
+  id: string
+  invoice_id: string
+  description: string
+  quantity: number
+  unit_price: number
+  amount: number
+  sort_order: number
+}
+
+export interface Invoice {
+  id: string
+  org_id: string
+  client_id: string | null
+  invoice_number: string
+  status: InvoiceStatus
+  currency: string
+  issue_date: string
+  due_date: string | null
+  subtotal: number
+  discount: number
+  tax_rate: number
+  tax_amount: number
+  total: number
+  notes: string | null
+  terms: string | null
+  sent_at: string | null
+  paid_at: string | null
+  public_token: string | null
+  created_at: string
+  updated_at: string
+  // Joined fields
+  client?: Client | null
+  items?: InvoiceItem[]
+}
+
+export interface QuoteItem {
+  id: string
+  quote_id: string
+  description: string
+  quantity: number
+  unit_price: number
+  amount: number
+  sort_order: number
+}
+
+export interface Quote {
+  id: string
+  org_id: string
+  client_id: string | null
+  quote_number: string
+  status: QuoteStatus
+  currency: string
+  issue_date: string
+  expiry_date: string | null
+  subtotal: number
+  discount: number
+  tax_rate: number
+  tax_amount: number
+  total: number
+  notes: string | null
+  terms: string | null
+  sent_at: string | null
+  accepted_at: string | null
+  converted_invoice_id: string | null
+  public_token: string | null
+  created_at: string
+  updated_at: string
+  // Joined fields
+  client?: Client | null
+  items?: QuoteItem[]
+}
+
+export interface DashboardStats {
+  totalInvoiced: number
+  totalPaid: number
+  totalOutstanding: number
+  totalOverdue: number
+  currency: string
+}
+
+export type ExpenseCategory = 'Software' | 'Travel' | 'Office' | 'Marketing' | 'Equipment' | 'Meals' | 'Professional' | 'Other'
+
+export interface Expense {
+  id: string
+  org_id: string
+  description: string
+  category: ExpenseCategory
+  amount: number
+  currency: string
+  date: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RecurringInvoiceItem {
+  id: string
+  recurring_invoice_id: string
+  description: string
+  quantity: number
+  unit_price: number
+  amount: number
+  sort_order: number
+}
+
+export interface RecurringInvoice {
+  id: string
+  org_id: string
+  client_id: string | null
+  title: string
+  currency: string
+  frequency: 'weekly' | 'monthly' | 'quarterly' | 'annually'
+  next_date: string
+  subtotal: number
+  discount: number
+  tax_rate: number
+  tax_amount: number
+  total: number
+  notes: string | null
+  terms: string | null
+  active: boolean
+  created_at: string
+  updated_at: string
+  client?: Client | null
+  items?: RecurringInvoiceItem[]
+}
