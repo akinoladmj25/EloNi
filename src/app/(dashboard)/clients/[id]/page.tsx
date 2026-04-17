@@ -51,6 +51,22 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const totalPaid = allInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total ?? 0), 0)
   const totalOutstanding = allInvoices.filter(i => i.status === 'sent' || i.status === 'overdue').reduce((s, i) => s + (i.total ?? 0), 0)
 
+  // Late-payer scoring: avg days from issue_date to paid_at
+  const paidWithDates = allInvoices.filter(i => i.status === 'paid' && i.paid_at && i.issue_date)
+  const avgDaysToPay = paidWithDates.length > 0
+    ? Math.round(paidWithDates.reduce((s, i) => {
+        const days = (new Date(i.paid_at!).getTime() - new Date(i.issue_date).getTime()) / 86400000
+        return s + days
+      }, 0) / paidWithDates.length)
+    : null
+
+  const payerScore = avgDaysToPay === null
+    ? { label: 'No data', color: 'bg-zinc-100 text-zinc-500' }
+    : avgDaysToPay <= 10 ? { label: `Fast payer · avg ${avgDaysToPay}d`, color: 'bg-emerald-50 text-emerald-700' }
+    : avgDaysToPay <= 25 ? { label: `On time · avg ${avgDaysToPay}d`, color: 'bg-blue-50 text-blue-700' }
+    : avgDaysToPay <= 40 ? { label: `Slow payer · avg ${avgDaysToPay}d`, color: 'bg-amber-50 text-amber-700' }
+    : { label: `Very slow · avg ${avgDaysToPay}d`, color: 'bg-red-50 text-red-700' }
+
   return (
     <div className="p-4 md:p-8">
       <div className="mb-6">
@@ -65,6 +81,9 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             <div>
               <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">{client.name}</h1>
               {client.company && <p className="text-sm text-zinc-400">{client.company}</p>}
+              <span className={`inline-block mt-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${payerScore.color}`}>
+                {payerScore.label}
+              </span>
             </div>
           </div>
           <Link

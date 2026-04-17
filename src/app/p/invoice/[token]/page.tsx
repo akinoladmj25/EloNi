@@ -2,13 +2,21 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatMoney, formatDate } from '@/lib/utils'
 import type { Invoice, InvoiceItem, Client, Organisation } from '@/types'
+import PaymentButtons from '@/components/PaymentButtons'
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }) {
   return { title: 'Invoice' }
 }
 
-export default async function PublicInvoicePage({ params }: { params: Promise<{ token: string }> }) {
+export default async function PublicInvoicePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>
+  searchParams: Promise<{ paid?: string; reference?: string }>
+}) {
   const { token } = await params
+  const { paid, reference } = await searchParams
   const supabase = await createClient()
 
   // Query by public_token — anon policy allows this
@@ -26,6 +34,26 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
 
   if (!invoice) notFound()
 
+  // If redirected back from Paystack with reference, verify the payment
+  if (paid === 'paystack' && reference && invoice.status !== 'paid') {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+    await fetch(`${baseUrl}/api/payment/paystack/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reference, token }),
+    }).catch(() => null)
+
+    // Re-fetch to get updated status
+    const { data: updated } = await supabase
+      .from('invoices')
+      .select('status, paid_at')
+      .eq('public_token', token)
+      .single()
+    if (updated?.status === 'paid') {
+      (invoice as any).status = 'paid'
+    }
+  }
+
   const org = invoice.org
   const items = (invoice.items ?? []).sort((a, b) => a.sort_order - b.sort_order)
   const currency = invoice.currency
@@ -38,6 +66,13 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
     cancelled: '#374151',
   }
   const statusColor = STATUS_COLORS[invoice.status] ?? '#6b7280'
+
+  const isUnpaid = invoice.status === 'sent' || invoice.status === 'overdue'
+  const hasStripe = !!org?.stripe_secret_key
+  const hasPayPal = !!(org?.paypal_client_id && org?.paypal_client_secret)
+  const hasPaystack = !!org?.paystack_secret_key
+  const showPaymentButtons = isUnpaid && (hasStripe || hasPayPal || hasPaystack)
+  const justPaid = !!paid
 
   return (
     <html lang="en">
@@ -77,6 +112,13 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
             font-weight: 600; cursor: pointer; white-space: nowrap;
           }
           .print-btn:hover { background: #27272a; }
+          .paid-banner {
+            max-width: 800px; margin: 0 auto 20px;
+            background: #f0fdf4; border: 1px solid #86efac;
+            border-radius: 8px; padding: 14px 20px;
+            display: flex; align-items: center; gap: 10px;
+          }
+          .paid-banner-text { font-size: 13px; color: #16a34a; font-weight: 600; }
           .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
           .logo-box { width: 40px; height: 40px; background: #18181b; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
           .logo-box span { color: white; font-size: 14px; font-weight: 800; }
@@ -130,6 +172,25 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
           <p>Invoice from {org?.name ?? 'your vendor'}</p>
           <button className="print-btn">Save as PDF / Print</button>
         </div>
+
+        {justPaid && (
+          <div className="paid-banner no-print">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <span className="paid-banner-text">Payment received — thank you! This invoice has been marked as paid.</span>
+          </div>
+        )}
+
+        {showPaymentButtons && (
+          <PaymentButtons
+            token={token}
+            hasStripe={hasStripe}
+            hasPayPal={hasPayPal}
+            hasPaystack={hasPaystack}
+            invoiceTotal={formatMoney(invoice.total, currency)}
+          />
+        )}
 
         <div className="page">
           <div className="header">

@@ -4,6 +4,7 @@ import { formatMoney } from '@/lib/utils'
 import Link from 'next/link'
 import { Download } from 'lucide-react'
 import type { Invoice, Expense } from '@/types'
+import TaxEstimateWidget from '@/components/TaxEstimateWidget'
 
 export const metadata = { title: 'Reports' }
 
@@ -113,6 +114,10 @@ export default async function ReportsPage() {
             <p className={`text-2xl font-bold tracking-tight ${color}`}>{formatMoney(value, cur)}</p>
           </div>
         ))}
+      </div>
+
+      <div className="mb-6">
+        <TaxEstimateWidget netProfit={netProfit} currency={cur} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

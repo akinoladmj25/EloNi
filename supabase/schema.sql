@@ -20,6 +20,12 @@ create table organisations (
   quote_prefix text default 'QUO',
   quote_next_number integer default 1000,
   tax_name text default 'VAT',
+  stripe_secret_key text,
+  stripe_publishable_key text,
+  paypal_client_id text,
+  paypal_client_secret text,
+  paystack_public_key text,
+  paystack_secret_key text,
   created_at timestamptz default now()
 );
 
@@ -58,6 +64,9 @@ create table invoices (
   terms text,
   sent_at timestamptz,
   paid_at timestamptz,
+  public_token text unique,
+  payment_provider text,
+  payment_reference text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -104,6 +113,7 @@ create table quotes (
   sent_at timestamptz,
   accepted_at timestamptz,
   converted_invoice_id uuid references invoices,
+  public_token text unique,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -124,3 +134,23 @@ alter table quote_items enable row level security;
 
 create policy "Users manage own quotes" on quotes for all using (org_id in (select id from organisations where user_id = auth.uid()));
 create policy "Users manage own quote items" on quote_items for all using (quote_id in (select q.id from quotes q join organisations o on o.id = q.org_id where o.user_id = auth.uid()));
+
+-- Client portal: anon read of shared invoices/quotes
+create policy "Portal: read invoice by public_token" on invoices
+  for select to anon using (public_token is not null);
+create policy "Portal: read invoice items" on invoice_items
+  for select to anon using (invoice_id in (select id from invoices where public_token is not null));
+create policy "Portal: read org for invoice" on organisations
+  for select to anon using (id in (select org_id from invoices where public_token is not null));
+create policy "Portal: read client for invoice" on clients
+  for select to anon using (id in (
+    select client_id from invoices where public_token is not null and client_id is not null
+  ));
+create policy "Portal: read quote by public_token" on quotes
+  for select to anon using (public_token is not null);
+create policy "Portal: read quote items" on quote_items
+  for select to anon using (quote_id in (select id from quotes where public_token is not null));
+create policy "Portal: accept quote by token" on quotes
+  for update to anon
+  using (public_token is not null)
+  with check (status = 'accepted');

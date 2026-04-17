@@ -286,6 +286,113 @@ export async function sendInvoiceEmail(params: {
   })
 }
 
+export async function sendThankYouEmail(params: {
+  invoiceNumber: string
+  paidAt?: string | null
+  currency: string
+  total: number
+  org: OrgData
+  client: ClientData
+  receiptUrl?: string | null
+}) {
+  const { invoiceNumber, paidAt, currency, total, org, client, receiptUrl } = params
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thank You — ${invoiceNumber}</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+
+      <!-- Header -->
+      <tr>
+        <td style="background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);padding:36px 32px;text-align:center;">
+          <div style="width:56px;height:56px;background:rgba(255,255,255,0.15);border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:28px;line-height:56px;display:block;">✓</span>
+          </div>
+          <div style="font-size:24px;font-weight:800;color:white;margin-bottom:6px;">Thank you, ${client.name}!</div>
+          <div style="font-size:14px;color:rgba(255,255,255,0.8);">Your payment has been received.</div>
+        </td>
+      </tr>
+
+      <!-- From -->
+      <tr>
+        <td style="background:white;padding:24px 32px 0;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td>
+                <div style="font-size:13px;color:#6b7280;margin-bottom:2px;">From</div>
+                <div style="font-size:15px;font-weight:700;color:#111827;">${org.name}</div>
+                ${org.email ? `<div style="font-size:12px;color:#6b7280;margin-top:2px;">${org.email}</div>` : ''}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Payment summary -->
+      <tr>
+        <td style="background:white;padding:20px 32px;">
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:20px 24px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="vertical-align:middle;">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#16a34a;margin-bottom:4px;">Payment Received</div>
+                  <div style="font-size:13px;color:#374151;">Invoice ${invoiceNumber}${paidAt ? ` · Paid ${formatDate(paidAt)}` : ''}</div>
+                </td>
+                <td style="text-align:right;vertical-align:middle;">
+                  <div style="font-size:26px;font-weight:800;color:#16a34a;font-variant-numeric:tabular-nums;">${formatMoney(total, currency)}</div>
+                  <div style="font-size:11px;color:#6b7280;">${currency}</div>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Message -->
+      <tr>
+        <td style="background:white;padding:0 32px 28px;">
+          <p style="margin:0 0 12px;font-size:14px;color:#374151;line-height:1.6;">
+            We really appreciate your prompt payment. It means a lot to us and helps us continue delivering great work for you.
+          </p>
+          <p style="margin:0;font-size:14px;color:#374151;line-height:1.6;">
+            If you need a receipt or have any questions, please don't hesitate to reach out${org.email ? ` at <a href="mailto:${org.email}" style="color:#16a34a;text-decoration:none;">${org.email}</a>` : ''}.
+          </p>
+          ${receiptUrl ? `
+          <div style="margin-top:20px;text-align:center;">
+            <a href="${receiptUrl}" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:600;">Download Receipt</a>
+          </div>` : ''}
+        </td>
+      </tr>
+
+      <!-- Footer -->
+      <tr>
+        <td style="background:#18181b;padding:16px 32px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:#71717a;">Sent via EloNi &mdash; Know the price. Send the invoice. Get paid.</p>
+        </td>
+      </tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`
+
+  return resend.emails.send({
+    from: FROM,
+    to: [client.email],
+    replyTo: org.email ?? undefined,
+    subject: `Thank you for your payment — ${invoiceNumber}`,
+    html,
+  })
+}
+
 export async function sendQuoteEmail(params: {
   quoteNumber: string
   issueDate: string

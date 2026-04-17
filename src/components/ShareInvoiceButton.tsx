@@ -14,6 +14,7 @@ export default function ShareInvoiceButton({ invoiceId, publicToken: initialToke
   const [copied, setCopied] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const portalUrl = token
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/p/invoice/${token}`
@@ -22,16 +23,21 @@ export default function ShareInvoiceButton({ invoiceId, publicToken: initialToke
   const enableSharing = async () => {
     if (token) { setOpen(v => !v); return }
     setGenerating(true)
+    setError(null)
     const supabase = createClient()
-    const { data } = await supabase
+    const { data, error: updateError } = await supabase
       .from('invoices')
       .update({ public_token: crypto.randomUUID() })
       .eq('id', invoiceId)
       .select('public_token')
       .single()
-    if (data?.public_token) setToken(data.public_token)
+    if (data?.public_token) {
+      setToken(data.public_token)
+      setOpen(true)
+    } else {
+      setError(updateError?.message ?? 'Failed to generate link')
+    }
     setGenerating(false)
-    setOpen(true)
   }
 
   const copy = () => {
@@ -58,6 +64,11 @@ export default function ShareInvoiceButton({ invoiceId, publicToken: initialToke
         <Link2 size={15} />
         {generating ? 'Generating…' : 'Share link'}
       </button>
+      {error && (
+        <p className="absolute right-0 top-full mt-1 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1 whitespace-nowrap z-20">
+          {error}
+        </p>
+      )}
 
       {open && token && (
         <>

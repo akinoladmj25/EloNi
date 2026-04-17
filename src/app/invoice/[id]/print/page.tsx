@@ -144,7 +144,7 @@ export default async function PrintInvoicePage({ params }: { params: Promise<{ i
       </head>
       <body>
         <div className="print-btn no-print">
-          <button onClick={() => { if (typeof window !== 'undefined') window.print() }}>Save as PDF / Print</button>
+          <button>Save as PDF / Print</button>
         </div>
 
         <div className="page">

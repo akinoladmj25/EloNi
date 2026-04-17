@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { formatMoney, getCurrencySymbol } from '@/lib/utils'
-import { Plus, Trash2, ChevronLeft } from 'lucide-react'
+import { Plus, Trash2, ChevronLeft, RotateCcw, Loader2 } from 'lucide-react'
 import type { Client, Organisation } from '@/types'
 
 const CURRENCIES = [
@@ -44,6 +44,7 @@ interface NewInvoiceFormProps {
 export default function NewInvoiceForm({ org, clients, defaultInvoiceNumber }: NewInvoiceFormProps) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
+  const [prefilling, setPrefilling] = useState(false)
   const [error, setError] = useState('')
 
   const today = new Date().toISOString().split('T')[0]
@@ -79,6 +80,28 @@ export default function NewInvoiceForm({ org, clients, defaultInvoiceNumber }: N
 
   const addItem = () => {
     setItems(prev => [...prev, { id: crypto.randomUUID(), description: '', quantity: 1, unit_price: 0, amount: 0 }])
+  }
+
+  const prefillFromLastInvoice = async (clientId: string) => {
+    if (!clientId) return
+    setPrefilling(true)
+    try {
+      const res = await fetch('/api/ai/prefill-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.items?.length) return
+      setItems(data.items.map((i: any) => ({ ...i, id: crypto.randomUUID() })))
+      if (data.currency) setForm(f => ({ ...f, currency: data.currency }))
+      if (data.notes) setForm(f => ({ ...f, notes: data.notes }))
+      if (data.terms) setForm(f => ({ ...f, terms: data.terms }))
+      if (data.tax_rate) setForm(f => ({ ...f, tax_rate: data.tax_rate }))
+      if (data.discount) setForm(f => ({ ...f, discount: data.discount }))
+    } finally {
+      setPrefilling(false)
+    }
   }
 
   const removeItem = (id: string) => {
@@ -188,9 +211,22 @@ export default function NewInvoiceForm({ org, clients, defaultInvoiceNumber }: N
                 ))}
                 <option value="__new__" disabled>── Add new client ──</option>
               </select>
-              <Link href="/clients/new" className="text-xs text-zinc-500 hover:text-zinc-800 mt-1 inline-block">
-                + Add new client
-              </Link>
+              <div className="flex items-center gap-3 mt-1">
+                <Link href="/clients/new" className="text-xs text-zinc-500 hover:text-zinc-800">
+                  + Add new client
+                </Link>
+                {form.client_id && (
+                  <button
+                    type="button"
+                    onClick={() => prefillFromLastInvoice(form.client_id)}
+                    disabled={prefilling}
+                    className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-800 disabled:opacity-50 transition-colors"
+                  >
+                    {prefilling ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />}
+                    Copy from last invoice
+                  </button>
+                )}
+              </div>
             </div>
 
             <div>

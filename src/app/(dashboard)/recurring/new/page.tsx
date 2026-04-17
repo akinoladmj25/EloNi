@@ -12,7 +12,7 @@ export default async function NewRecurringPage() {
 
   const { data: org } = await supabase
     .from('organisations')
-    .select('id,default_currency,tax_name,tax_rate')
+    .select('id,default_currency,tax_name')
     .eq('user_id', user.id)
     .single()
 

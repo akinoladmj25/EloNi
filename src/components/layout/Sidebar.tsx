@@ -14,6 +14,7 @@ import {
   BarChart2,
   Settings,
   LogOut,
+  Sparkles,
 } from 'lucide-react'
 
 const mainNav = [
@@ -25,6 +26,7 @@ const mainNav = [
   { href: '/expenses',  label: 'Expenses',   icon: Wallet },
   { href: '/recurring', label: 'Recurring',  icon: RefreshCw },
   { href: '/reports',   label: 'Reports',    icon: BarChart2 },
+  { href: '/ask',       label: 'Ask EloNi',  icon: Sparkles },
 ]
 
 export default function Sidebar({ userEmail }: { userEmail: string }) {
@@ -38,7 +40,7 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
     : 'U'
 
   return (
-    <aside className="w-[220px] min-h-screen shrink-0 flex flex-col" style={{ background: '#111111' }}>
+    <aside className="w-[220px] h-full flex flex-col" style={{ background: '#111111' }}>
       {/* Logo */}
       <div className="h-14 flex items-center px-5 border-b border-white/[0.06]">
         <Link href="/dashboard" className="flex items-center gap-2.5">
@@ -55,25 +57,37 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
         <div className="space-y-0.5">
           {mainNav.map(({ href, label, icon: Icon }) => {
             const isActive = active(href)
+            const isAI = href === '/ask'
             return (
               <Link
                 key={href}
                 href={href}
                 className={`group relative flex items-center gap-2.5 h-[34px] px-2 rounded-lg text-[13px] font-medium transition-all duration-100 ${
                   isActive
-                    ? 'bg-white/[0.10] text-white'
-                    : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.05]'
+                    ? isAI ? 'text-white' : 'bg-white/[0.10] text-white'
+                    : isAI ? 'text-violet-400 hover:text-violet-200 hover:bg-violet-500/[0.12]' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.05]'
                 }`}
+                style={isActive && isAI ? { background: 'linear-gradient(90deg, rgba(139,92,246,0.25) 0%, rgba(99,91,255,0.15) 100%)' } : undefined}
               >
-                {isActive && (
+                {isActive && !isAI && (
                   <span className="absolute left-0 top-[6px] bottom-[6px] w-[3px] bg-white rounded-full" />
+                )}
+                {isActive && isAI && (
+                  <span className="absolute left-0 top-[6px] bottom-[6px] w-[3px] bg-violet-400 rounded-full" />
                 )}
                 <Icon
                   size={15}
                   strokeWidth={isActive ? 2.5 : 1.8}
-                  className={isActive ? 'text-white' : 'text-zinc-500 group-hover:text-zinc-300 transition-colors'}
+                  className={
+                    isAI
+                      ? isActive ? 'text-violet-300' : 'text-violet-500 group-hover:text-violet-300 transition-colors'
+                      : isActive ? 'text-white' : 'text-zinc-500 group-hover:text-zinc-300 transition-colors'
+                  }
                 />
                 <span className="flex-1 leading-none">{label}</span>
+                {isAI && !isActive && (
+                  <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-violet-500/20 text-violet-400 leading-none">AI</span>
+                )}
               </Link>
             )
           })}

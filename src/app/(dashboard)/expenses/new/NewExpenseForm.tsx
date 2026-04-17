@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Scan, Loader2 } from 'lucide-react'
 
 const CATEGORIES = ['Software', 'Travel', 'Office', 'Marketing', 'Equipment', 'Meals', 'Professional', 'Other'] as const
 const CURRENCIES = ['GBP', 'USD', 'EUR', 'NGN', 'CAD', 'AUD', 'GHS', 'KES', 'ZAR', 'CHF', 'JPY']
@@ -14,7 +14,9 @@ interface Props { orgId: string; defaultCurrency: string }
 export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const [error, setError] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -29,6 +31,29 @@ export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
 
   const set = (field: keyof typeof form, value: string) =>
     setForm(f => ({ ...f, [field]: value }))
+
+  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setScanning(true)
+    setError('')
+    const data = new FormData()
+    data.append('receipt', file)
+    try {
+      const res = await fetch('/api/ai/scan-receipt', { method: 'POST', body: data })
+      const result = await res.json()
+      if (!res.ok) { setError(result.error ?? 'Scan failed'); return }
+      if (result.description) set('description', result.description)
+      if (result.category && CATEGORIES.includes(result.category)) set('category', result.category)
+      if (result.amount && result.amount > 0) set('amount', String(result.amount))
+      if (result.date) set('date', result.date)
+    } catch {
+      setError('Receipt scan failed. Please fill in manually.')
+    } finally {
+      setScanning(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,6 +90,21 @@ export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
       </div>
 
       {error && <div className="mb-4 text-sm text-red-600 bg-red-50 px-3 py-2.5 rounded-md">{error}</div>}
+
+      {/* Receipt scan */}
+      <div className="mb-4 flex items-center gap-3 p-3.5 rounded-xl border border-dashed border-zinc-300 bg-zinc-50">
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleScanReceipt} />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={scanning}
+          className="inline-flex items-center gap-2 h-8 px-3.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium disabled:opacity-50 transition-colors shrink-0"
+        >
+          {scanning ? <Loader2 size={13} className="animate-spin" /> : <Scan size={13} />}
+          {scanning ? 'Scanning…' : 'Scan receipt'}
+        </button>
+        <p className="text-xs text-zinc-400">Upload a photo of your receipt and AI will fill in the details automatically.</p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="bg-white rounded-xl p-5">

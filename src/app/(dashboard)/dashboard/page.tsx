@@ -1,3 +1,4 @@
+import type React from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatMoney, formatDate } from '@/lib/utils'
@@ -34,7 +35,7 @@ export default async function DashboardPage() {
     )
   }
 
-  const [{ data: invoices }, { data: quotes }, { data: expenses }] = await Promise.all([
+  const [{ data: invoices }, { data: quotes }, { data: expenses }, { data: recurring }] = await Promise.all([
     supabase
       .from('invoices')
       .select('*, client:clients(name)')
@@ -49,6 +50,11 @@ export default async function DashboardPage() {
       .from('expenses')
       .select('amount, currency')
       .eq('org_id', org.id) as unknown as Promise<{ data: { amount: number; currency: string }[] | null }>,
+    supabase
+      .from('recurring_invoices')
+      .select('total, currency, next_date, active')
+      .eq('org_id', org.id)
+      .eq('active', true) as unknown as Promise<{ data: { total: number; currency: string; next_date: string; active: boolean }[] | null }>,
   ])
 
   const cur = org.default_currency
@@ -65,6 +71,20 @@ export default async function DashboardPage() {
   const pendingQuotes = allQuotes.filter(q => q.status === 'sent').length
   const acceptedQuotes = allQuotes.filter(q => q.status === 'accepted').length
 
+  // Cash flow forecast: outstanding invoices + recurring due within 30/60/90 days
+  const today = new Date(); today.setHours(0,0,0,0)
+  const d30 = new Date(today); d30.setDate(d30.getDate() + 30)
+  const d60 = new Date(today); d60.setDate(d60.getDate() + 60)
+  const d90 = new Date(today); d90.setDate(d90.getDate() + 90)
+
+  const outstandingAll = all.filter(i => (i.status === 'sent' || i.status === 'overdue') && i.currency === cur)
+  const cashflow30 = outstandingAll.filter(i => i.due_date && new Date(i.due_date) <= d30).reduce((s, i) => s + (i.total ?? 0), 0)
+    + (recurring ?? []).filter(r => r.currency === cur && new Date(r.next_date) <= d30).reduce((s, r) => s + r.total, 0)
+  const cashflow60 = outstandingAll.filter(i => i.due_date && new Date(i.due_date) <= d60).reduce((s, i) => s + (i.total ?? 0), 0)
+    + (recurring ?? []).filter(r => r.currency === cur && new Date(r.next_date) <= d60).reduce((s, r) => s + r.total, 0)
+  const cashflow90 = outstandingAll.filter(i => i.due_date && new Date(i.due_date) <= d90).reduce((s, i) => s + (i.total ?? 0), 0)
+    + (recurring ?? []).filter(r => r.currency === cur && new Date(r.next_date) <= d90).reduce((s, r) => s + r.total, 0)
+
   const totalExpenses = allExpenses.reduce((s, e) => s + (e.amount ?? 0), 0)
   const totalPaid = sum('paid')
   const netProfit = totalPaid - totalExpenses
@@ -77,42 +97,39 @@ export default async function DashboardPage() {
   const incompleteSteps = setupSteps.filter(s => !s.done)
   const showOnboarding = incompleteSteps.length > 0 && all.length === 0
 
-  const stats = [
+  const overdueHas = count('overdue') > 0
+  const stats: { label: string; value: string; sub: string; icon: any; iconStyle: React.CSSProperties; stripeStyle: React.CSSProperties }[] = [
     {
       label: 'Total Invoiced',
       value: formatMoney(sum(), cur),
       sub: `${count()} invoices`,
       icon: TrendingUp,
-      accent: 'bg-zinc-900',
-      iconColor: 'text-white',
-      stripe: 'bg-zinc-900',
+      iconStyle: { background: 'linear-gradient(135deg,#27272a,#18181b)' },
+      stripeStyle: { background: 'linear-gradient(90deg,#27272a,#52525b)' },
     },
     {
       label: 'Collected',
       value: formatMoney(totalPaid, cur),
       sub: `${count('paid')} paid`,
       icon: CheckCircle2,
-      accent: 'bg-emerald-500',
-      iconColor: 'text-white',
-      stripe: 'bg-emerald-500',
+      iconStyle: { background: 'linear-gradient(135deg,#22c55e,#16a34a)' },
+      stripeStyle: { background: 'linear-gradient(90deg,#22c55e,#4ade80)' },
     },
     {
       label: 'Outstanding',
       value: formatMoney(sum('sent'), cur),
       sub: `${count('sent')} awaiting payment`,
       icon: Clock,
-      accent: 'bg-blue-500',
-      iconColor: 'text-white',
-      stripe: 'bg-blue-500',
+      iconStyle: { background: 'linear-gradient(135deg,#3b82f6,#2563eb)' },
+      stripeStyle: { background: 'linear-gradient(90deg,#3b82f6,#60a5fa)' },
     },
     {
       label: 'Overdue',
       value: formatMoney(sum('overdue'), cur),
       sub: `${count('overdue')} need attention`,
       icon: AlertCircle,
-      accent: count('overdue') > 0 ? 'bg-red-500' : 'bg-zinc-300',
-      iconColor: 'text-white',
-      stripe: count('overdue') > 0 ? 'bg-red-500' : 'bg-zinc-200',
+      iconStyle: { background: overdueHas ? 'linear-gradient(135deg,#ef4444,#dc2626)' : '#e4e4e7' },
+      stripeStyle: { background: overdueHas ? 'linear-gradient(90deg,#ef4444,#f87171)' : '#e4e4e7' },
     },
   ]
 
@@ -160,15 +177,15 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
         {stats.map(s => (
           <div key={s.label} className="bg-white rounded-xl overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-            <div className={`h-[3px] ${s.stripe}`} />
+            <div className="h-[3px]" style={s.stripeStyle} />
             <div className="p-5">
               <div className="flex items-start justify-between mb-3">
                 <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">{s.label}</p>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${s.accent}`}>
-                  <s.icon size={14} className={s.iconColor} />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={s.iconStyle}>
+                  <s.icon size={15} className="text-white" />
                 </div>
               </div>
-              <p className="text-[26px] font-bold text-zinc-900 tracking-tight leading-none tabular" style={{ fontVariantNumeric: 'tabular-nums' }}>{s.value}</p>
+              <p className="text-[27px] font-bold text-zinc-900 tracking-tight leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>{s.value}</p>
               <p className="text-[11px] text-zinc-400 mt-2">{s.sub}</p>
             </div>
           </div>
@@ -206,6 +223,29 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Cash flow forecast */}
+      {(cashflow90 > 0) && (
+        <div className="bg-white rounded-xl overflow-hidden mb-6" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="h-[3px] bg-violet-500" />
+          <div className="px-5 py-4 border-b border-zinc-100">
+            <p className="text-sm font-semibold text-zinc-900">Cash Flow Forecast</p>
+            <p className="text-xs text-zinc-400 mt-0.5">Expected income from outstanding invoices + recurring ({cur} only)</p>
+          </div>
+          <div className="grid grid-cols-3 divide-x divide-zinc-100">
+            {[
+              { label: '30 days', value: cashflow30 },
+              { label: '60 days', value: cashflow60 },
+              { label: '90 days', value: cashflow90 },
+            ].map(({ label, value }) => (
+              <div key={label} className="px-5 py-4">
+                <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">{label}</p>
+                <p className="text-xl font-bold text-zinc-900 tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatMoney(value, cur)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quotes summary banner */}
       {(pendingQuotes > 0 || acceptedQuotes > 0) && (

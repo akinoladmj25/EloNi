@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { logout } from '@/app/(auth)/actions'
 import {
   LayoutDashboard, FileText, FileCheck2, Receipt, Users2,
-  Wallet, RefreshCw, BarChart2, Settings, LogOut, Menu, X,
+  Wallet, RefreshCw, BarChart2, Settings, LogOut, Menu, X, Sparkles,
 } from 'lucide-react'
 
 const mainNav = [
@@ -18,6 +18,7 @@ const mainNav = [
   { href: '/expenses',  label: 'Expenses',  icon: Wallet },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports',   label: 'Reports',   icon: BarChart2 },
+  { href: '/ask',       label: 'Ask EloNi', icon: Sparkles },
 ]
 
 export default function MobileNav({ userEmail }: { userEmail: string }) {
@@ -53,7 +54,7 @@ export default function MobileNav({ userEmail }: { userEmail: string }) {
             className="md:hidden fixed inset-0 z-30 bg-black/40"
             onClick={() => setOpen(false)}
           />
-          <div className="md:hidden fixed top-14 left-0 right-0 z-40 border-b border-white/[0.06] px-2.5 py-3 shadow-2xl">
+          <div className="md:hidden fixed top-14 left-0 right-0 z-40 border-b border-white/[0.06] px-2.5 py-3 shadow-2xl" style={{ background: '#111111' }}>
             <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-widest px-2.5 mb-2">Menu</p>
             <div className="space-y-px mb-3">
               {mainNav.map(({ href, label, icon: Icon }) => {

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Send, CheckCircle2, XCircle, AlertCircle, RotateCcw, Mail } from 'lucide-react'
+import { Send, CheckCircle2, XCircle, AlertCircle, RotateCcw, Mail, Heart, Printer } from 'lucide-react'
 import type { InvoiceStatus } from '@/types'
 
 interface Props {
@@ -16,6 +16,7 @@ export default function InvoiceStatusActions({ invoiceId, currentStatus, clientE
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [emailSending, setEmailSending] = useState(false)
+  const [thankYouSending, setThankYouSending] = useState(false)
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const updateStatus = async (newStatus: InvoiceStatus) => {
@@ -55,35 +56,47 @@ export default function InvoiceStatusActions({ invoiceId, currentStatus, clientE
     setEmailSending(false)
   }
 
+  const sendThankYou = async () => {
+    setThankYouSending(true)
+    setMsg(null)
+    try {
+      const res = await fetch('/api/send-thank-you', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setMsg({ type: 'error', text: data.error ?? 'Failed to send email' })
+      } else {
+        setMsg({ type: 'success', text: 'Thank you email sent to client!' })
+      }
+    } catch {
+      setMsg({ type: 'error', text: 'Failed to send email' })
+    }
+    setThankYouSending(false)
+  }
+
   return (
     <div className="bg-white rounded-lg border border-zinc-200 p-5">
       <h3 className="text-sm font-medium text-zinc-900 mb-3">Actions</h3>
       <div className="space-y-2">
 
-        {/* Draft: send email or mark sent */}
+        {/* Draft */}
         {currentStatus === 'draft' && (
           <>
-            <button
-              onClick={sendEmail}
-              disabled={emailSending || loading}
-              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-900 hover:bg-zinc-800 text-white inline-flex items-center justify-center gap-2"
-            >
+            <button onClick={sendEmail} disabled={emailSending || loading}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-900 hover:bg-zinc-800 text-white inline-flex items-center justify-center gap-2">
               <Mail size={14} />
               {emailSending ? 'Sending…' : 'Send to Client'}
             </button>
-            <button
-              onClick={() => updateStatus('sent')}
-              disabled={loading || emailSending}
-              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 inline-flex items-center justify-center gap-2"
-            >
+            <button onClick={() => updateStatus('sent')} disabled={loading || emailSending}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 inline-flex items-center justify-center gap-2">
               <Send size={13} />
               Mark as Sent
             </button>
-            <button
-              onClick={() => updateStatus('cancelled')}
-              disabled={loading || emailSending}
-              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-50 hover:bg-zinc-100 text-zinc-500 inline-flex items-center justify-center gap-2"
-            >
+            <button onClick={() => updateStatus('cancelled')} disabled={loading || emailSending}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-50 hover:bg-zinc-100 text-zinc-500 inline-flex items-center justify-center gap-2">
               <XCircle size={13} />
               Cancel Invoice
             </button>
@@ -93,35 +106,23 @@ export default function InvoiceStatusActions({ invoiceId, currentStatus, clientE
         {/* Sent */}
         {currentStatus === 'sent' && (
           <>
-            <button
-              onClick={sendEmail}
-              disabled={emailSending || loading}
-              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 inline-flex items-center justify-center gap-2"
-            >
+            <button onClick={sendEmail} disabled={emailSending || loading}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 inline-flex items-center justify-center gap-2">
               <Mail size={13} />
               {emailSending ? 'Sending…' : 'Resend to Client'}
             </button>
-            <button
-              onClick={() => updateStatus('paid')}
-              disabled={loading || emailSending}
-              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center justify-center gap-2"
-            >
+            <button onClick={() => updateStatus('paid')} disabled={loading || emailSending}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center justify-center gap-2">
               <CheckCircle2 size={13} />
               Mark as Paid
             </button>
-            <button
-              onClick={() => updateStatus('overdue')}
-              disabled={loading || emailSending}
-              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-red-50 hover:bg-red-100 text-red-700 inline-flex items-center justify-center gap-2"
-            >
+            <button onClick={() => updateStatus('overdue')} disabled={loading || emailSending}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-red-50 hover:bg-red-100 text-red-700 inline-flex items-center justify-center gap-2">
               <AlertCircle size={13} />
               Mark as Overdue
             </button>
-            <button
-              onClick={() => updateStatus('cancelled')}
-              disabled={loading || emailSending}
-              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-50 hover:bg-zinc-100 text-zinc-500 inline-flex items-center justify-center gap-2"
-            >
+            <button onClick={() => updateStatus('cancelled')} disabled={loading || emailSending}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-50 hover:bg-zinc-100 text-zinc-500 inline-flex items-center justify-center gap-2">
               <XCircle size={13} />
               Cancel Invoice
             </button>
@@ -131,40 +132,53 @@ export default function InvoiceStatusActions({ invoiceId, currentStatus, clientE
         {/* Overdue */}
         {currentStatus === 'overdue' && (
           <>
-            <button
-              onClick={sendEmail}
-              disabled={emailSending || loading}
-              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 inline-flex items-center justify-center gap-2"
-            >
+            <button onClick={sendEmail} disabled={emailSending || loading}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 inline-flex items-center justify-center gap-2">
               <Mail size={13} />
               {emailSending ? 'Sending…' : 'Send Reminder'}
             </button>
-            <button
-              onClick={() => updateStatus('paid')}
-              disabled={loading || emailSending}
-              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center justify-center gap-2"
-            >
+            <button onClick={() => updateStatus('paid')} disabled={loading || emailSending}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center justify-center gap-2">
               <CheckCircle2 size={13} />
               Mark as Paid
             </button>
-            <button
-              onClick={() => updateStatus('cancelled')}
-              disabled={loading || emailSending}
-              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-50 hover:bg-zinc-100 text-zinc-500 inline-flex items-center justify-center gap-2"
-            >
+            <button onClick={() => updateStatus('cancelled')} disabled={loading || emailSending}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-50 hover:bg-zinc-100 text-zinc-500 inline-flex items-center justify-center gap-2">
               <XCircle size={13} />
               Cancel Invoice
             </button>
           </>
         )}
 
+        {/* Paid — thank you + receipt */}
+        {currentStatus === 'paid' && (
+          <>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-50 border border-emerald-100 mb-1">
+              <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+              <span className="text-xs font-medium text-emerald-700">Payment received</span>
+            </div>
+            <button onClick={sendThankYou} disabled={thankYouSending || !clientEmail}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center justify-center gap-2">
+              <Heart size={13} />
+              {thankYouSending ? 'Sending…' : 'Send Thank You Email'}
+            </button>
+            <a href={`/receipt/${invoiceId}/print`} target="_blank"
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors bg-zinc-100 hover:bg-zinc-200 text-zinc-700 inline-flex items-center justify-center gap-2">
+              <Printer size={13} />
+              View Receipt
+            </a>
+            <button onClick={() => updateStatus('draft')} disabled={loading}
+              className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-50 hover:bg-zinc-100 text-zinc-400 inline-flex items-center justify-center gap-2">
+              <RotateCcw size={12} />
+              Reopen as Draft
+            </button>
+          </>
+        )}
+
         {/* Cancelled */}
         {currentStatus === 'cancelled' && (
-          <button
-            onClick={() => updateStatus('draft')}
-            disabled={loading}
-            className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-800 hover:bg-zinc-900 text-white inline-flex items-center justify-center gap-2"
-          >
+          <button onClick={() => updateStatus('draft')} disabled={loading}
+            className="w-full h-9 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 bg-zinc-800 hover:bg-zinc-900 text-white inline-flex items-center justify-center gap-2">
             <RotateCcw size={13} />
             Reopen as Draft
           </button>
@@ -174,6 +188,11 @@ export default function InvoiceStatusActions({ invoiceId, currentStatus, clientE
         {!clientEmail && currentStatus !== 'paid' && currentStatus !== 'cancelled' && (
           <p className="text-[11px] text-zinc-400 text-center pt-1">
             Add client email to enable sending
+          </p>
+        )}
+        {!clientEmail && currentStatus === 'paid' && (
+          <p className="text-[11px] text-zinc-400 text-center">
+            Add client email to send thank you
           </p>
         )}
 

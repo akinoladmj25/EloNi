@@ -20,6 +20,12 @@ export interface Organisation {
   quote_prefix: string
   quote_next_number: number
   tax_name: string
+  stripe_secret_key?: string | null
+  stripe_publishable_key?: string | null
+  paypal_client_id?: string | null
+  paypal_client_secret?: string | null
+  paystack_public_key?: string | null
+  paystack_secret_key?: string | null
   created_at: string
 }
 

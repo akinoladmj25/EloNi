@@ -44,6 +44,12 @@ export default function SettingsForm({ org, userId }: SettingsFormProps) {
     invoice_prefix: org?.invoice_prefix ?? 'INV',
     quote_prefix: org?.quote_prefix ?? 'QUO',
     tax_name: org?.tax_name ?? 'VAT',
+    stripe_secret_key: org?.stripe_secret_key ?? '',
+    stripe_publishable_key: org?.stripe_publishable_key ?? '',
+    paypal_client_id: org?.paypal_client_id ?? '',
+    paypal_client_secret: org?.paypal_client_secret ?? '',
+    paystack_public_key: org?.paystack_public_key ?? '',
+    paystack_secret_key: org?.paystack_secret_key ?? '',
   })
 
   const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -105,6 +111,12 @@ export default function SettingsForm({ org, userId }: SettingsFormProps) {
       quote_prefix: form.quote_prefix,
       tax_name: form.tax_name,
       logo_url: logoUrl,
+      stripe_secret_key: form.stripe_secret_key || null,
+      stripe_publishable_key: form.stripe_publishable_key || null,
+      paypal_client_id: form.paypal_client_id || null,
+      paypal_client_secret: form.paypal_client_secret || null,
+      paystack_public_key: form.paystack_public_key || null,
+      paystack_secret_key: form.paystack_secret_key || null,
     }
 
     if (org) {
@@ -318,6 +330,116 @@ export default function SettingsForm({ org, userId }: SettingsFormProps) {
               className={inputClass}
             />
             <p className="text-xs text-zinc-400 mt-1">e.g. VAT, GST, Sales Tax</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Integrations */}
+      <div className="bg-white rounded-lg border border-zinc-200 p-6">
+        <h2 className="text-sm font-semibold text-zinc-900 mb-1">Payment Integrations</h2>
+        <p className="text-xs text-zinc-400 mb-5">Add your payment provider keys to enable online payments on invoices. Keys are stored securely and never shared.</p>
+
+        {/* Stripe */}
+        <div className="mb-6 pb-6 border-b border-zinc-100">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: '#635bff' }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="white">
+                <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.91 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+              </svg>
+            </div>
+            <span className="text-sm font-medium text-zinc-800">Stripe</span>
+            {form.stripe_secret_key && <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">Connected</span>}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Secret Key</label>
+              <input
+                type="password"
+                placeholder="sk_live_…"
+                value={form.stripe_secret_key}
+                onChange={e => handleChange('stripe_secret_key', e.target.value)}
+                className={inputClass}
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Publishable Key</label>
+              <input
+                type="text"
+                placeholder="pk_live_…"
+                value={form.stripe_publishable_key}
+                onChange={e => handleChange('stripe_publishable_key', e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* PayPal */}
+        <div className="mb-6 pb-6 border-b border-zinc-100">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: '#ffc439' }}>
+              <span style={{ fontSize: 8, fontWeight: 800, color: '#003087' }}>PP</span>
+            </div>
+            <span className="text-sm font-medium text-zinc-800">PayPal</span>
+            {form.paypal_client_id && <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">Connected</span>}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Client ID</label>
+              <input
+                type="text"
+                placeholder="AV…"
+                value={form.paypal_client_id}
+                onChange={e => handleChange('paypal_client_id', e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Client Secret</label>
+              <input
+                type="password"
+                placeholder="EH…"
+                value={form.paypal_client_secret}
+                onChange={e => handleChange('paypal_client_secret', e.target.value)}
+                className={inputClass}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Paystack */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: '#00c3f7' }}>
+              <span style={{ fontSize: 8, fontWeight: 800, color: 'white' }}>PS</span>
+            </div>
+            <span className="text-sm font-medium text-zinc-800">Paystack</span>
+            {form.paystack_secret_key && <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">Connected</span>}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Public Key</label>
+              <input
+                type="text"
+                placeholder="pk_live_…"
+                value={form.paystack_public_key}
+                onChange={e => handleChange('paystack_public_key', e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Secret Key</label>
+              <input
+                type="password"
+                placeholder="sk_live_…"
+                value={form.paystack_secret_key}
+                onChange={e => handleChange('paystack_secret_key', e.target.value)}
+                className={inputClass}
+                autoComplete="off"
+              />
+            </div>
           </div>
         </div>
       </div>
