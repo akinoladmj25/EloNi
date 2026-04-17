@@ -34,6 +34,14 @@ export default async function PublicInvoicePage({
 
   if (!invoice) notFound()
 
+  // Record first view — anon update policy allows this
+  if (!invoice.client_viewed_at) {
+    await supabase
+      .from('invoices')
+      .update({ client_viewed_at: new Date().toISOString() })
+      .eq('public_token', token)
+  }
+
   // If redirected back from Paystack with reference, verify the payment
   if (paid === 'paystack' && reference && invoice.status !== 'paid') {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'

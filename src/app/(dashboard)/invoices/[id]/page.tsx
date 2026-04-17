@@ -246,6 +246,12 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                   <dd className="font-medium text-zinc-900">{formatDate(invoice.paid_at)}</dd>
                 </div>
               )}
+              {invoice.client_viewed_at && (
+                <div className="flex justify-between text-sm">
+                  <dt className="text-zinc-400">Viewed by client</dt>
+                  <dd className="font-medium text-emerald-700">{formatDate(invoice.client_viewed_at)}</dd>
+                </div>
+              )}
             </dl>
           </div>
 

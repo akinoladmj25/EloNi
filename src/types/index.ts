@@ -73,6 +73,8 @@ export interface Invoice {
   sent_at: string | null
   paid_at: string | null
   public_token: string | null
+  client_viewed_at: string | null
+  receipt_url?: string | null
   created_at: string
   updated_at: string
   // Joined fields

@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronLeft, Scan, Loader2 } from 'lucide-react'
+import { ChevronLeft, Scan, Loader2, CheckCircle2 } from 'lucide-react'
 
 const CATEGORIES = ['Software', 'Travel', 'Office', 'Marketing', 'Equipment', 'Meals', 'Professional', 'Other'] as const
 const CURRENCIES = ['GBP', 'USD', 'EUR', 'NGN', 'CAD', 'AUD', 'GHS', 'KES', 'ZAR', 'CHF', 'JPY']
@@ -16,6 +16,7 @@ export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
   const [saving, setSaving] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState('')
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const today = new Date().toISOString().split('T')[0]
@@ -47,6 +48,7 @@ export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
       if (result.category && CATEGORIES.includes(result.category)) set('category', result.category)
       if (result.amount && result.amount > 0) set('amount', String(result.amount))
       if (result.date) set('date', result.date)
+      setReceiptFile(file)
     } catch {
       setError('Receipt scan failed. Please fill in manually.')
     } finally {
@@ -63,7 +65,7 @@ export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
     setError('')
 
     const supabase = createClient()
-    const { error: dbError } = await supabase.from('expenses').insert({
+    const { data: expenseData, error: dbError } = await supabase.from('expenses').insert({
       org_id: orgId,
       description: form.description,
       category: form.category,
@@ -71,9 +73,28 @@ export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
       currency: form.currency,
       date: form.date,
       notes: form.notes || null,
-    })
+      receipt_url: null,
+    }).select('id').single()
 
     if (dbError) { setError(dbError.message); setSaving(false); return }
+
+    // Upload receipt if one was scanned
+    if (receiptFile && expenseData?.id) {
+      try {
+        const ext = receiptFile.name.split('.').pop() ?? 'jpg'
+        const path = `${orgId}/${expenseData.id}/receipt.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('receipts')
+          .upload(path, receiptFile)
+
+        if (!uploadError) {
+          await supabase.from('expenses').update({ receipt_url: path }).eq('id', expenseData.id)
+        }
+      } catch {
+        // Storage upload failed — expense is still saved, just without receipt
+      }
+    }
+
     router.push('/expenses')
   }
 
@@ -103,7 +124,15 @@ export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
           {scanning ? <Loader2 size={13} className="animate-spin" /> : <Scan size={13} />}
           {scanning ? 'Scanning…' : 'Scan receipt'}
         </button>
-        <p className="text-xs text-zinc-400">Upload a photo of your receipt and AI will fill in the details automatically.</p>
+        {receiptFile ? (
+          <div className="flex items-center gap-1.5 text-xs text-emerald-700">
+            <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+            <span className="font-medium">Receipt attached</span>
+            <span className="text-zinc-400 truncate max-w-[160px]">— {receiptFile.name}</span>
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-400">Upload a photo of your receipt and AI will fill in the details automatically.</p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">

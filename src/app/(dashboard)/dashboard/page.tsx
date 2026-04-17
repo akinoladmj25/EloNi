@@ -1,5 +1,6 @@
 import type React from 'react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatMoney, formatDate } from '@/lib/utils'
 import { Plus, ArrowUpRight, TrendingUp, AlertCircle, Clock, CheckCircle2, FileCheck2, TrendingDown, Wallet } from 'lucide-react'
@@ -18,30 +19,19 @@ export default async function DashboardPage() {
   const { data: org } = await supabase
     .from('organisations').select('*').eq('user_id', user.id).single() as { data: Organisation | null }
 
-  if (!org) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center max-w-sm">
-          <div className="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <TrendingUp size={22} className="text-zinc-400" />
-          </div>
-          <h2 className="text-base font-semibold text-zinc-900 mb-1">Set up your business profile</h2>
-          <p className="text-sm text-zinc-400 mb-5">Add your business details to start creating invoices.</p>
-          <Link href="/settings" className="inline-flex items-center h-9 px-5 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 transition-colors">
-            Go to Settings
-          </Link>
-        </div>
-      </div>
-    )
-  }
+  if (!org) redirect('/onboarding')
 
-  const [{ data: invoices }, { data: quotes }, { data: expenses }, { data: recurring }] = await Promise.all([
+  const [{ data: statsData }, { data: recentData }, { data: quotes }, { data: expenses }, { data: recurring }] = await Promise.all([
+    supabase
+      .from('invoices')
+      .select('id, status, total, currency, due_date, updated_at')
+      .eq('org_id', org.id) as unknown as Promise<{ data: Pick<Invoice, 'id' | 'status' | 'total' | 'currency' | 'due_date'>[] | null }>,
     supabase
       .from('invoices')
       .select('*, client:clients(name)')
       .eq('org_id', org.id)
       .order('created_at', { ascending: false })
-      .limit(20) as unknown as Promise<{ data: (Invoice & { client: { name: string } | null })[] | null }>,
+      .limit(10) as unknown as Promise<{ data: (Invoice & { client: { name: string } | null })[] | null }>,
     supabase
       .from('quotes')
       .select('id, status, total, currency')
@@ -58,15 +48,16 @@ export default async function DashboardPage() {
   ])
 
   const cur = org.default_currency
-  const all = invoices ?? []
-  const curInvoices = all.filter(i => i.currency === cur)
+  const all = recentData ?? []
+  const allStats = statsData ?? []
+  const curInvoices = allStats.filter(i => i.currency === cur)
   const allQuotes = quotes ?? []
   const allExpenses = (expenses ?? []).filter(e => e.currency === cur)
 
   const sum = (filter?: string) =>
     curInvoices.filter(i => !filter || i.status === filter).reduce((s, i) => s + (i.total ?? 0), 0)
   const count = (filter?: string) =>
-    filter ? curInvoices.filter(i => i.status === filter).length : all.length
+    filter ? curInvoices.filter(i => i.status === filter).length : allStats.length
 
   const pendingQuotes = allQuotes.filter(q => q.status === 'sent').length
   const acceptedQuotes = allQuotes.filter(q => q.status === 'accepted').length
@@ -77,7 +68,7 @@ export default async function DashboardPage() {
   const d60 = new Date(today); d60.setDate(d60.getDate() + 60)
   const d90 = new Date(today); d90.setDate(d90.getDate() + 90)
 
-  const outstandingAll = all.filter(i => (i.status === 'sent' || i.status === 'overdue') && i.currency === cur)
+  const outstandingAll = allStats.filter(i => (i.status === 'sent' || i.status === 'overdue') && i.currency === cur)
   const cashflow30 = outstandingAll.filter(i => i.due_date && new Date(i.due_date) <= d30).reduce((s, i) => s + (i.total ?? 0), 0)
     + (recurring ?? []).filter(r => r.currency === cur && new Date(r.next_date) <= d30).reduce((s, r) => s + r.total, 0)
   const cashflow60 = outstandingAll.filter(i => i.due_date && new Date(i.due_date) <= d60).reduce((s, i) => s + (i.total ?? 0), 0)
@@ -95,7 +86,7 @@ export default async function DashboardPage() {
     { done: !!org.logo_url, label: "Upload your logo", href: "/settings" },
   ]
   const incompleteSteps = setupSteps.filter(s => !s.done)
-  const showOnboarding = incompleteSteps.length > 0 && all.length === 0
+  const showOnboarding = incompleteSteps.length > 0 && allStats.length === 0
 
   const overdueHas = count('overdue') > 0
   const stats: { label: string; value: string; sub: string; icon: any; iconStyle: React.CSSProperties; stripeStyle: React.CSSProperties }[] = [
@@ -277,7 +268,7 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {all.length === 0 ? (
+        {allStats.length === 0 ? (
           <div className="py-16 text-center">
             <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center mx-auto mb-3">
               <TrendingUp size={18} className="text-zinc-400" />

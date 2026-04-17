@@ -33,11 +33,8 @@ export async function GET(req: Request) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const FROM = process.env.RESEND_FROM_EMAIL ?? 'EloNi <noreply@eloni.app>'
 
-  const { data: invoices, error } = await supabase
-    .from('invoices')
-    .select('id, invoice_number, total, currency, due_date, client:clients(name, email), org:organisations(name, email)')
-    .eq('status', 'overdue')
-    .not('client', 'is', null)
+  const { data: invoicesData, error } = await supabase.rpc('get_overdue_invoices_for_reminders')
+  const invoices = invoicesData as any[] | null
 
   if (error) {
     console.error('Cron reminder error:', error)
