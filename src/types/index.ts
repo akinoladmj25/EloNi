@@ -26,6 +26,11 @@ export interface Organisation {
   paypal_client_secret?: string | null
   paystack_public_key?: string | null
   paystack_secret_key?: string | null
+  business_type?: 'sole_trader' | 'limited_company' | 'partnership' | null
+  vat_registered?: boolean | null
+  vat_number?: string | null
+  vat_scheme?: 'standard' | 'flat_rate' | 'cash' | null
+  vat_flat_rate?: number | null
   created_at: string
 }
 
@@ -138,6 +143,9 @@ export interface Expense {
   currency: string
   date: string
   notes: string | null
+  receipt_url?: string | null
+  vat_amount?: number | null
+  vat_reclaimable?: boolean | null
   created_at: string
   updated_at: string
 }

@@ -25,6 +25,7 @@ export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
     description: '',
     category: 'Other' as typeof CATEGORIES[number],
     amount: '',
+    vat_amount: '',
     currency: defaultCurrency,
     date: today,
     notes: '',
@@ -70,6 +71,7 @@ export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
       description: form.description,
       category: form.category,
       amount: parseFloat(form.amount),
+      vat_amount: form.vat_amount ? parseFloat(form.vat_amount) : 0,
       currency: form.currency,
       date: form.date,
       notes: form.notes || null,
@@ -164,6 +166,22 @@ export default function NewExpenseForm({ orgId, defaultCurrency }: Props) {
               <select value={form.currency} onChange={e => set('currency', e.target.value)} className={inp}>
                 {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className={lbl}>VAT included <span className="text-zinc-300 font-normal">(reclaimable input VAT)</span></label>
+              <div className="flex items-center gap-2">
+                <input type="number" min="0" step="0.01" placeholder="0.00"
+                  value={form.vat_amount} onChange={e => set('vat_amount', e.target.value)} className={inp} />
+                <button type="button"
+                  onClick={() => {
+                    const a = parseFloat(form.amount)
+                    if (!isNaN(a) && a > 0) set('vat_amount', (a / 6).toFixed(2))
+                  }}
+                  className="h-9 px-3 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-xs text-zinc-600 whitespace-nowrap shrink-0">
+                  Auto 20%
+                </button>
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">Leave 0 if no VAT was charged. Used for VAT returns.</p>
             </div>
             <div className="sm:col-span-2">
               <label className={lbl}>Notes</label>

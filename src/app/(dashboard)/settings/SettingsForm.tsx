@@ -50,6 +50,9 @@ export default function SettingsForm({ org, userId }: SettingsFormProps) {
     paypal_client_secret: org?.paypal_client_secret ?? '',
     paystack_public_key: org?.paystack_public_key ?? '',
     paystack_secret_key: org?.paystack_secret_key ?? '',
+    business_type: org?.business_type ?? 'sole_trader',
+    vat_registered: org?.vat_registered ?? false,
+    vat_number: org?.vat_number ?? '',
   })
 
   const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -117,6 +120,9 @@ export default function SettingsForm({ org, userId }: SettingsFormProps) {
       paypal_client_secret: form.paypal_client_secret || null,
       paystack_public_key: form.paystack_public_key || null,
       paystack_secret_key: form.paystack_secret_key || null,
+      business_type: form.business_type,
+      vat_registered: form.vat_registered,
+      vat_number: form.vat_registered ? (form.vat_number || null) : null,
     }
 
     if (org) {
@@ -331,6 +337,69 @@ export default function SettingsForm({ org, userId }: SettingsFormProps) {
             />
             <p className="text-xs text-zinc-400 mt-1">e.g. VAT, GST, Sales Tax</p>
           </div>
+        </div>
+      </div>
+
+      {/* UK Tax & Filing */}
+      <div className="bg-white rounded-lg border border-zinc-200 p-6">
+        <h2 className="text-sm font-semibold text-zinc-900 mb-1">UK Tax &amp; Filing</h2>
+        <p className="text-xs text-zinc-400 mb-5">Tells Reports which tax rules apply to your business.</p>
+
+        <div className="space-y-5">
+          <div>
+            <label className={labelClass}>Business Type</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'sole_trader',     label: 'Sole trader',     hint: 'Self-assessment' },
+                { id: 'limited_company', label: 'Limited company', hint: 'Corporation tax' },
+                { id: 'partnership',     label: 'Partnership',     hint: 'Joint return' },
+              ].map(opt => {
+                const active = form.business_type === opt.id
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, business_type: opt.id as typeof f.business_type }))}
+                    className={`text-left rounded-lg border p-3 transition-colors ${
+                      active ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 bg-white hover:border-zinc-300'
+                    }`}
+                  >
+                    <p className={`text-sm font-semibold ${active ? 'text-white' : 'text-zinc-900'}`}>{opt.label}</p>
+                    <p className={`text-[11px] mt-0.5 ${active ? 'text-zinc-300' : 'text-zinc-400'}`}>{opt.hint}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-zinc-100">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.vat_registered}
+                onChange={e => setForm(f => ({ ...f, vat_registered: e.target.checked }))}
+                className="mt-0.5 w-4 h-4 rounded border-zinc-300 text-zinc-900 focus:ring-0 focus:ring-offset-0"
+              />
+              <div>
+                <p className="text-sm font-medium text-zinc-900">VAT registered</p>
+                <p className="text-xs text-zinc-400 mt-0.5">Enables VAT summary on Reports. Required if turnover exceeds £90,000.</p>
+              </div>
+            </label>
+          </div>
+
+          {form.vat_registered && (
+            <div>
+              <label className={labelClass}>VAT Number</label>
+              <input
+                type="text"
+                placeholder="GB123456789"
+                value={form.vat_number}
+                onChange={e => handleChange('vat_number', e.target.value.toUpperCase())}
+                className={inputClass}
+              />
+              <p className="text-xs text-zinc-400 mt-1">Shown on invoices. UK VAT numbers start with GB.</p>
+            </div>
+          )}
         </div>
       </div>
 

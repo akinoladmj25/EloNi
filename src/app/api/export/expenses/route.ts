@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { Expense } from '@/types'
 
-export async function GET() {
+export async function GET(req: Request) {
+  const url = new URL(req.url)
+  const from = url.searchParams.get('from')
+  const to   = url.searchParams.get('to')
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
@@ -15,15 +19,20 @@ export async function GET() {
 
   if (!org) return NextResponse.json({ error: 'No organisation' }, { status: 400 })
 
-  const { data } = await supabase
+  let query = supabase
     .from('expenses')
     .select('*')
     .eq('org_id', org.id)
-    .order('date', { ascending: false }) as { data: Expense[] | null }
+    .order('date', { ascending: false })
+
+  if (from) query = query.gte('date', from)
+  if (to)   query = query.lte('date', to)
+
+  const { data } = await query as unknown as { data: Expense[] | null }
 
   const rows = data ?? []
 
-  const headers = ['Date', 'Description', 'Category', 'Amount', 'Currency', 'Notes']
+  const headers = ['Date', 'Description', 'Category', 'Amount', 'VAT Amount', 'VAT Reclaimable', 'Currency', 'Notes']
 
   const escape = (val: string | number | null | undefined) => {
     if (val == null) return ''
@@ -39,6 +48,8 @@ export async function GET() {
       e.description,
       e.category,
       e.amount,
+      e.vat_amount ?? 0,
+      e.vat_reclaimable === false ? 'No' : 'Yes',
       e.currency,
       e.notes ?? '',
     ].map(escape).join(',')),
