@@ -148,7 +148,7 @@ export default function SettingsForm({ org, userId }: SettingsFormProps) {
   const labelClass = 'block text-xs font-medium text-zinc-500 mb-1.5'
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="text-sm text-red-600 bg-red-50 px-3 py-2.5 rounded-md">{error}</div>
       )}

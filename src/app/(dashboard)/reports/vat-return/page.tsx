@@ -7,7 +7,9 @@ import type { Invoice, Expense } from '@/types'
 import ReportsNav from '../ReportsNav'
 import VatQuarterPicker from './VatQuarterPicker'
 import PrintButton from './PrintButton'
+import SaveActions from './SaveActions'
 import { calculateVatReturn, recentVatQuarters } from '@/lib/uk-tax'
+import type { VatReturnRecord } from '@/types'
 
 export const metadata = { title: 'VAT Return' }
 
@@ -35,7 +37,7 @@ export default async function VatReturnPage({
 
   const cur = org.default_currency
 
-  const [{ data: rawInvoices }, { data: rawExpenses }] = await Promise.all([
+  const [{ data: rawInvoices }, { data: rawExpenses }, { data: existingReturn }, { data: history }] = await Promise.all([
     supabase
       .from('invoices')
       .select('status, total, subtotal, tax_amount, currency, paid_at')
@@ -45,6 +47,19 @@ export default async function VatReturnPage({
       .from('expenses')
       .select('amount, vat_amount, vat_reclaimable, currency, date')
       .eq('org_id', org.id) as unknown as Promise<{ data: Pick<Expense, 'amount' | 'vat_amount' | 'vat_reclaimable' | 'currency' | 'date'>[] | null }>,
+    supabase
+      .from('vat_returns')
+      .select('id, status, submitted_at, paid_at')
+      .eq('org_id', org.id)
+      .eq('period_from', from)
+      .eq('period_to', to)
+      .maybeSingle() as unknown as Promise<{ data: Pick<VatReturnRecord, 'id' | 'status' | 'submitted_at' | 'paid_at'> | null }>,
+    supabase
+      .from('vat_returns')
+      .select('id, period_from, period_to, status, box5, submitted_at, paid_at')
+      .eq('org_id', org.id)
+      .order('period_from', { ascending: false })
+      .limit(10) as unknown as Promise<{ data: Pick<VatReturnRecord, 'id' | 'period_from' | 'period_to' | 'status' | 'box5' | 'submitted_at' | 'paid_at'>[] | null }>,
   ])
 
   // Cash basis: paid in period
@@ -124,6 +139,13 @@ export default async function VatReturnPage({
         </div>
       </div>
 
+      <SaveActions
+        periodFrom={from}
+        periodTo={to}
+        boxes={{ box1: vat.box1, box2: vat.box2, box3: vat.box3, box4: vat.box4, box5: vat.box5, box6: vat.box6, box7: vat.box7, box8: vat.box8, box9: vat.box9 }}
+        existing={existingReturn}
+      />
+
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 print:hidden">
         <SummaryCard title="Sales (ex VAT)"     value={vat.box6} currency={cur} sub={`${inv.length} invoices`} />
@@ -146,6 +168,46 @@ export default async function VatReturnPage({
           (or wait for our MTD submission feature in Phase 3). Print or export this page for your records and your accountant.
         </p>
       </div>
+
+      {/* Submission history */}
+      {history && history.length > 0 && (
+        <div className="bg-white rounded-xl overflow-hidden mb-6 print:hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="px-5 py-4 border-b border-zinc-100">
+            <p className="text-sm font-semibold text-zinc-900">Submission history</p>
+            <p className="text-xs text-zinc-400 mt-0.5">Last 10 returns</p>
+          </div>
+          <table className="w-full">
+            <thead>
+              <tr className="bg-zinc-50/70 border-b border-zinc-100">
+                <th className="text-left text-[11px] font-semibold text-zinc-400 uppercase tracking-wide px-5 py-2.5">Period</th>
+                <th className="text-right text-[11px] font-semibold text-zinc-400 uppercase tracking-wide px-5 py-2.5">Box 5</th>
+                <th className="text-left text-[11px] font-semibold text-zinc-400 uppercase tracking-wide px-5 py-2.5">Status</th>
+                <th className="text-right text-[11px] font-semibold text-zinc-400 uppercase tracking-wide px-5 py-2.5">Filed</th>
+                <th className="text-right text-[11px] font-semibold text-zinc-400 uppercase tracking-wide px-5 py-2.5">Paid</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-50">
+              {history.map(h => (
+                <tr key={h.id}>
+                  <td className="px-5 py-3 text-sm text-zinc-700">
+                    <Link href={`/reports/vat-return?from=${h.period_from}&to=${h.period_to}`} className="hover:text-zinc-900 hover:underline underline-offset-2">
+                      {formatDate(h.period_from)} – {formatDate(h.period_to)}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-3 text-sm font-bold text-zinc-900 text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatMoney(h.box5, cur)}</td>
+                  <td className="px-5 py-3">
+                    {h.status === 'paid'      && <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700">Paid</span>}
+                    {h.status === 'submitted' && <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700">Filed</span>}
+                    {h.status === 'draft'     && <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700">Draft</span>}
+                  </td>
+                  <td className="px-5 py-3 text-sm text-zinc-500 text-right">{h.submitted_at ? formatDate(h.submitted_at) : '—'}</td>
+                  <td className="px-5 py-3 text-sm text-zinc-500 text-right">{h.paid_at ? formatDate(h.paid_at) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <p className="text-[11px] text-zinc-400 text-center print:hidden">
         Calculated on cash basis. Paid invoices &amp; recorded expenses in the period are included.

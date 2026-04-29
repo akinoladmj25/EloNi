@@ -134,6 +134,42 @@ export interface DashboardStats {
 
 export type ExpenseCategory = 'Software' | 'Travel' | 'Office' | 'Marketing' | 'Equipment' | 'Meals' | 'Professional' | 'Other'
 
+export interface VatReturnRecord {
+  id: string
+  org_id: string
+  period_from: string
+  period_to: string
+  box1: number
+  box2: number
+  box3: number
+  box4: number
+  box5: number
+  box6: number
+  box7: number
+  box8: number
+  box9: number
+  status: 'draft' | 'submitted' | 'paid'
+  submission_method: 'manual' | 'hmrc_mtd' | null
+  hmrc_processing_date: string | null
+  hmrc_form_bundle_number: string | null
+  hmrc_charge_ref_number: string | null
+  hmrc_payment_indicator: string | null
+  submitted_at: string | null
+  paid_at: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface HmrcConnection {
+  id: string
+  org_id: string
+  vat_number: string
+  token_expires_at: string
+  connected_at: string
+  last_used_at: string | null
+}
+
 export interface Expense {
   id: string
   org_id: string
