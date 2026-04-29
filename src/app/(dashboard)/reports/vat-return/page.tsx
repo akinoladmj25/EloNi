@@ -8,8 +8,12 @@ import ReportsNav from '../ReportsNav'
 import VatQuarterPicker from './VatQuarterPicker'
 import PrintButton from './PrintButton'
 import SaveActions from './SaveActions'
+import ObligationsCard from './ObligationsCard'
 import { calculateVatReturn, recentVatQuarters } from '@/lib/uk-tax'
 import type { VatReturnRecord } from '@/types'
+import { ensureValidToken, getClientIp } from '@/lib/hmrc/server'
+import { getVatObligations, fraudPreventionHeaders, type VatObligation } from '@/lib/hmrc/client'
+import { headers as nextHeaders } from 'next/headers'
 
 export const metadata = { title: 'VAT Return' }
 
@@ -79,6 +83,34 @@ export default async function VatReturnPage({
   const refundDue = vat.box5 < 0
   const isVatReg = org.vat_registered === true
 
+  // Fetch HMRC obligations if connected (best-effort, fail silently)
+  let obligations: VatObligation[] | null = null
+  let hmrcConnected = false
+  let hmrcError: string | null = null
+  if (isVatReg) {
+    const token = await ensureValidToken(supabase, org.id)
+    if (token) {
+      hmrcConnected = true
+      try {
+        const reqHeaders = await nextHeaders()
+        const headers = fraudPreventionHeaders({
+          clientIp: reqHeaders.get('x-forwarded-for')?.split(',')[0] ?? '127.0.0.1',
+          userId: user.id,
+        })
+        const result = await getVatObligations({
+          vrn: token.vatNumber,
+          accessToken: token.accessToken,
+          status: 'O',
+          fraudHeaders: headers,
+        })
+        obligations = result.obligations
+      } catch (e) {
+        hmrcError = e instanceof Error ? e.message : 'HMRC fetch failed'
+      }
+    }
+  }
+  const hasOpenObligation = obligations?.some(o => o.start === from && o.end === to) ?? false
+
   return (
     <div className="p-4 md:p-8">
       <Link href="/reports" className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-700 transition-colors mb-3 print:hidden">
@@ -106,6 +138,14 @@ export default async function VatReturnPage({
       <div className="print:hidden mb-6">
         <VatQuarterPicker quarters={quarters} current={from} />
       </div>
+
+      {hmrcConnected && obligations && <ObligationsCard obligations={obligations} />}
+      {hmrcError && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-6 text-xs text-amber-700 flex items-start gap-2 print:hidden">
+          <AlertTriangle size={13} className="text-amber-600 mt-0.5 shrink-0" />
+          <span><strong>HMRC connection issue:</strong> {hmrcError}. Reconnect from <Link href="/settings" className="underline">settings</Link>.</span>
+        </div>
+      )}
 
       {/* The 9-box VAT return */}
       <div className="bg-white rounded-xl overflow-hidden mb-6" style={{ boxShadow: 'var(--shadow-card)' }}>
@@ -144,6 +184,8 @@ export default async function VatReturnPage({
         periodTo={to}
         boxes={{ box1: vat.box1, box2: vat.box2, box3: vat.box3, box4: vat.box4, box5: vat.box5, box6: vat.box6, box7: vat.box7, box8: vat.box8, box9: vat.box9 }}
         existing={existingReturn}
+        hmrcConnected={hmrcConnected}
+        hasOpenObligation={hasOpenObligation}
       />
 
       {/* Summary */}

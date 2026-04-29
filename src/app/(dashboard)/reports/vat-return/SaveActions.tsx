@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, FileCheck, CreditCard, Loader2, AlertCircle } from 'lucide-react'
+import HmrcSubmitButton from './HmrcSubmitButton'
 
 interface Props {
   periodFrom: string
@@ -14,9 +15,11 @@ interface Props {
     submitted_at: string | null
     paid_at: string | null
   } | null
+  hmrcConnected?: boolean
+  hasOpenObligation?: boolean
 }
 
-export default function SaveActions({ periodFrom, periodTo, boxes, existing }: Props) {
+export default function SaveActions({ periodFrom, periodTo, boxes, existing, hmrcConnected, hasOpenObligation }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [busy, setBusy] = useState(false)
@@ -70,11 +73,19 @@ export default function SaveActions({ periodFrom, periodTo, boxes, existing }: P
       )}
 
       <div className="flex flex-wrap gap-2 mt-4">
+        {/* HMRC submission takes precedence if connected & period is an open obligation */}
+        {hmrcConnected && hasOpenObligation && status !== 'submitted' && status !== 'paid' && (
+          <HmrcSubmitButton periodFrom={periodFrom} periodTo={periodTo} boxes={boxes} />
+        )}
+
         {!status && (
           <ActionBtn onClick={() => send('save_draft')} busy={busy} icon={FileCheck} label="Save as draft" />
         )}
-        {(!status || status === 'draft') && (
-          <ActionBtn onClick={() => send('mark_filed')} busy={busy} icon={CheckCircle2} label="Mark as filed" primary />
+        {(!status || status === 'draft') && !hasOpenObligation && (
+          <ActionBtn onClick={() => send('mark_filed')} busy={busy} icon={CheckCircle2} label="Mark as filed (manual)" primary />
+        )}
+        {(!status || status === 'draft') && hasOpenObligation && hmrcConnected && (
+          <ActionBtn onClick={() => send('mark_filed')} busy={busy} icon={CheckCircle2} label="Mark as filed manually" />
         )}
         {status === 'submitted' && (
           <ActionBtn onClick={() => send('mark_paid')} busy={busy} icon={CreditCard} label="Mark as paid" primary />
@@ -83,6 +94,12 @@ export default function SaveActions({ periodFrom, periodTo, boxes, existing }: P
           <p className="text-xs text-zinc-400 italic">No further action needed for this period.</p>
         )}
       </div>
+
+      {hmrcConnected && !hasOpenObligation && status !== 'submitted' && status !== 'paid' && (
+        <p className="text-[11px] text-zinc-400 mt-3">
+          HMRC has no open obligation for this period. To submit via MTD, pick one of the open obligations above.
+        </p>
+      )}
 
       {pending && <p className="text-[11px] text-zinc-400 mt-2">Refreshing…</p>}
     </div>
