@@ -224,3 +224,78 @@ export function selfAssessmentDates(taxYearEndYear: number): {
     secondPaymentOnAccount:  `${taxYearEndYear + 1}-07-31`,
   }
 }
+
+// ── VAT Return (9-box) ──────────────────────────────────────────────────
+
+export interface VatReturn {
+  box1: number  // VAT due on sales and other outputs
+  box2: number  // VAT due on acquisitions from NI/EU
+  box3: number  // Total VAT due (box1 + box2)
+  box4: number  // VAT reclaimed on purchases and other inputs
+  box5: number  // Net VAT to pay or reclaim (box3 - box4)
+  box6: number  // Total value of sales (excluding VAT)
+  box7: number  // Total value of purchases (excluding VAT)
+  box8: number  // Goods to NI/EU (most UK businesses: 0)
+  box9: number  // Goods from NI/EU (most UK businesses: 0)
+}
+
+export function calculateVatReturn(input: {
+  outputVat: number      // sum of tax_amount on paid invoices in period
+  inputVat:  number      // sum of vat_amount on reclaimable expenses in period
+  totalSalesExVat:     number  // sum of subtotal on paid invoices
+  totalPurchasesExVat: number  // sum of (amount - vat_amount) on expenses
+}): VatReturn {
+  const box1 = input.outputVat
+  const box2 = 0
+  const box3 = box1 + box2
+  const box4 = input.inputVat
+  const box5 = box3 - box4
+  const box6 = input.totalSalesExVat
+  const box7 = input.totalPurchasesExVat
+  return { box1, box2, box3, box4, box5, box6, box7, box8: 0, box9: 0 }
+}
+
+/** UK VAT quarter presets: returns the 4 quarters ending in or before today. */
+export function recentVatQuarters(count = 4): { label: string; from: string; to: string; due: string }[] {
+  const quarters: { label: string; from: string; to: string; due: string }[] = []
+  const now = new Date()
+  // Find the last completed quarter end
+  const m = now.getMonth()
+  const y = now.getFullYear()
+  let qEndMonth = Math.floor(m / 3) * 3 - 1   // last day of previous quarter
+  let qEndYear = y
+  if (qEndMonth < 0) { qEndMonth += 12; qEndYear -= 1 }
+
+  for (let i = 0; i < count; i++) {
+    const endDate   = new Date(qEndYear, qEndMonth + 1, 0) // last day of month
+    const startDate = new Date(qEndYear, qEndMonth - 2, 1)
+    const dueDate   = new Date(qEndYear, qEndMonth + 2, 7) // 1m + 7d after end
+    const fmt = (d: Date) => d.toISOString().slice(0, 10)
+    const monthName = endDate.toLocaleString('en-GB', { month: 'short' })
+    const startMonth = startDate.toLocaleString('en-GB', { month: 'short' })
+    quarters.push({
+      label: `${startMonth} – ${monthName} ${endDate.getFullYear()}`,
+      from: fmt(startDate),
+      to:   fmt(endDate),
+      due:  fmt(dueDate),
+    })
+    // Move back 3 months
+    qEndMonth -= 3
+    if (qEndMonth < 0) { qEndMonth += 12; qEndYear -= 1 }
+  }
+  return quarters
+}
+
+// ── Self-Assessment SA103 category mapping ─────────────────────────────
+
+export const SA103_CATEGORIES = {
+  Software:     { line: 'Phone, fax, stationery and other office costs',     box: 'box20' },
+  Travel:       { line: 'Car, van and travel expenses',                       box: 'box18' },
+  Office:       { line: 'Rent, rates, power and insurance costs',             box: 'box19' },
+  Marketing:    { line: 'Advertising and business entertainment costs',       box: 'box21' },
+  Equipment:    { line: 'Other business expenses',                            box: 'box26' },
+  Meals:        { line: 'Car, van and travel expenses (subsistence)',         box: 'box18' },
+  Professional: { line: 'Accountancy, legal and other professional fees',     box: 'box24' },
+  Other:        { line: 'Other business expenses',                            box: 'box26' },
+} as const
+

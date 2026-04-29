@@ -6,6 +6,7 @@ import { Download, AlertTriangle, FileText, TrendingUp, TrendingDown, Wallet } f
 import type { Invoice, Expense } from '@/types'
 import PeriodPicker from './PeriodPicker'
 import UkTaxCard from './UkTaxCard'
+import ReportsNav from './ReportsNav'
 import { currentTaxYearRange } from '@/lib/uk-tax'
 
 export const metadata = { title: 'Reports' }
@@ -115,6 +116,8 @@ export default async function ReportsPage({
           </a>
         </div>
       </div>
+
+      <ReportsNav />
 
       <PeriodPicker />
 
