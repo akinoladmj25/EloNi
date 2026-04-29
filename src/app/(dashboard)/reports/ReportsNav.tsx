@@ -2,10 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart2, Receipt, FileText, CalendarCheck } from 'lucide-react'
+import { BarChart2, Receipt, FileText, CalendarCheck, Scale, ListTree } from 'lucide-react'
 
 const TABS = [
   { href: '/reports',                  label: 'Profit & Loss',     icon: BarChart2 },
+  { href: '/reports/balance-sheet',    label: 'Balance Sheet',     icon: Scale },
+  { href: '/reports/trial-balance',    label: 'Trial Balance',     icon: ListTree },
   { href: '/reports/vat-return',       label: 'VAT Return',        icon: Receipt },
   { href: '/reports/self-assessment',  label: 'Self-Assessment',   icon: FileText },
   { href: '/reports/year-end',         label: 'Year End',          icon: CalendarCheck },

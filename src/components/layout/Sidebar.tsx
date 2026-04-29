@@ -12,21 +12,23 @@ import {
   Wallet,
   RefreshCw,
   BarChart2,
+  BookOpen,
   Settings,
   LogOut,
   Sparkles,
 } from 'lucide-react'
 
 const mainNav = [
-  { href: '/dashboard', label: 'Dashboard',  icon: LayoutDashboard },
-  { href: '/invoices',  label: 'Invoices',   icon: FileText },
-  { href: '/quotes',    label: 'Quotes',     icon: FileCheck2 },
-  { href: '/receipts',  label: 'Receipts',   icon: Receipt },
-  { href: '/clients',   label: 'Clients',    icon: Users2 },
-  { href: '/expenses',  label: 'Expenses',   icon: Wallet },
-  { href: '/recurring', label: 'Recurring',  icon: RefreshCw },
-  { href: '/reports',   label: 'Reports',    icon: BarChart2 },
-  { href: '/ask',       label: 'Ask EloNi',  icon: Sparkles },
+  { href: '/dashboard',          label: 'Dashboard',     icon: LayoutDashboard },
+  { href: '/invoices',           label: 'Invoices',      icon: FileText },
+  { href: '/quotes',             label: 'Quotes',        icon: FileCheck2 },
+  { href: '/receipts',           label: 'Receipts',      icon: Receipt },
+  { href: '/clients',            label: 'Clients',       icon: Users2 },
+  { href: '/expenses',           label: 'Expenses',      icon: Wallet },
+  { href: '/recurring',          label: 'Recurring',     icon: RefreshCw },
+  { href: '/reports',            label: 'Reports',       icon: BarChart2 },
+  { href: '/chart-of-accounts',  label: 'Accounts',      icon: BookOpen },
+  { href: '/ask',                label: 'Ask EloNi',     icon: Sparkles },
 ]
 
 export default function Sidebar({ userEmail }: { userEmail: string }) {
